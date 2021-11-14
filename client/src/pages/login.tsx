@@ -1,5 +1,12 @@
 //import { useMutation } from "@apollo/client";
-import { Box, Button, FormControl } from "@chakra-ui/react";
+import {
+  Box,
+  Button,
+  FormControl,
+  Spinner,
+  Flex,
+  useToast,
+} from "@chakra-ui/react";
 import { Form, Formik, FormikHelpers } from "formik";
 import { useRouter } from "next/router";
 import InputField from "../components/InputField";
@@ -7,9 +14,11 @@ import Wrapper from "../components/Wrapper";
 import {
   LoginInput,
   MeDocument,
-  MeQuery, useLoginMutation
+  MeQuery,
+  useLoginMutation,
 } from "../generated/graphql";
 import { mapFieldErrors } from "../helpers/mapFieldErrors";
+import { useCheckAuth } from "../utils/useCheckAuth";
 //import { registerMutation } from "../graphql-client/mutation/mutation";
 
 // interface UserMutationResponse {
@@ -32,6 +41,9 @@ const login = () => {
   //   { registerInput: NewUserInput }
   // >(registerMutation);
   const router = useRouter();
+  const toast = useToast();
+
+  const { loading: authLoading, data: authData } = useCheckAuth();
 
   const [loginUser, { data, error, loading: _registerUserLoading }] =
     useLoginMutation();
@@ -59,6 +71,14 @@ const login = () => {
     if (response.data?.login.errors) {
       setErrors(mapFieldErrors(response.data.login.errors));
     } else if (response.data?.login.success) {
+      toast({
+        title: "Welcome",
+        description: "Logged is successfully",
+        status: "success",
+        duration: 3000,
+        isClosable: true,
+      });
+
       router.push("/");
     }
   };
@@ -68,43 +88,51 @@ const login = () => {
     password: "",
   };
 
+  
+
   return (
-    <Wrapper>
-      {error && <p>Faild to login. Internal server error</p>}
-      {data && data.login.success && (
-        <p>Login successfully {JSON.stringify(data)}</p>
+    <>
+      {authLoading || authData?.me ? (
+        <Flex alignItems="center" justifyContent="center" minH="100vh">
+          <Spinner />
+        </Flex>
+      ) : (
+        <Wrapper>
+          {error && <p>Faild to login. Internal server error</p>}
+
+          <Formik initialValues={initialValues} onSubmit={onLoginSubmit}>
+            {({ isSubmitting }) => (
+              <Form>
+                <FormControl>
+                  <InputField
+                    name="usernameOrEmail"
+                    placeholder="User name or email"
+                    label="Username or email"
+                    type="text"
+                  />
+                  <Box mt={4}>
+                    <InputField
+                      name="password"
+                      placeholder="Password"
+                      label="Password"
+                      type="password"
+                    />
+                  </Box>
+                </FormControl>
+                <Button
+                  type="submit"
+                  colorScheme="teal"
+                  mt={4}
+                  isLoading={isSubmitting}
+                >
+                  Login
+                </Button>
+              </Form>
+            )}
+          </Formik>
+        </Wrapper>
       )}
-      <Formik initialValues={initialValues} onSubmit={onLoginSubmit}>
-        {({ isSubmitting }) => (
-          <Form>
-            <FormControl>
-              <InputField
-                name="usernameOrEmail"
-                placeholder="User name or email"
-                label="Username or email"
-                type="text"
-              />
-              <Box mt={4}>
-                <InputField
-                  name="password"
-                  placeholder="Password"
-                  label="Password"
-                  type="password"
-                />
-              </Box>
-            </FormControl>
-            <Button
-              type="submit"
-              colorScheme="teal"
-              mt={4}
-              isLoading={isSubmitting}
-            >
-              Login
-            </Button>
-          </Form>
-        )}
-      </Formik>
-    </Wrapper>
+    </>
   );
 };
 
