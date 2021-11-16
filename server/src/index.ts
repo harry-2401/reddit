@@ -16,6 +16,7 @@ import { COOKIE_NAME, __prod__ } from "./constants";
 import { Context } from "./types/Context";
 import { PostResolver } from "../resolver/post";
 import cors from 'cors'
+import { sendEmail } from "../utils/sendEmail";
 
 const main = async (): Promise<void> => {
   await createConnection({

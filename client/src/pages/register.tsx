@@ -1,5 +1,5 @@
 //import { useMutation } from "@apollo/client";
-import { Button, FormControl, Flex, Spinner, useToast } from "@chakra-ui/react";
+import { Button,  Flex, Spinner, useToast } from "@chakra-ui/react";
 import { Form, Formik, FormikHelpers } from "formik";
 import { useRouter } from "next/router";
 import InputField from "../components/InputField";
@@ -35,7 +35,7 @@ const register = () => {
   // >(registerMutation);
   const router = useRouter();
   const { loading: authLoading, data: authData } = useCheckAuth();
-  const toast = useToast()
+  const toast = useToast();
 
   const [registerUser, { data, error, loading: _registerUserLoading }] =
     useRegisterMutation();
@@ -92,26 +92,24 @@ const register = () => {
           <Formik initialValues={initialValues} onSubmit={onRegisterSubmit}>
             {({ isSubmitting }) => (
               <Form>
-                <FormControl>
-                  <InputField
-                    name="username"
-                    placeholder="Username"
-                    label="Username"
-                    type="text"
-                  />
-                  <InputField
-                    name="email"
-                    placeholder="Email"
-                    label="Email"
-                    type="text"
-                  />
-                  <InputField
-                    name="password"
-                    placeholder="Password"
-                    label="Password"
-                    type="password"
-                  />
-                </FormControl>
+                <InputField
+                  name="username"
+                  placeholder="Username"
+                  label="Username"
+                  type="text"
+                />
+                <InputField
+                  name="email"
+                  placeholder="Email"
+                  label="Email"
+                  type="text"
+                />
+                <InputField
+                  name="password"
+                  placeholder="Password"
+                  label="Password"
+                  type="password"
+                />
                 <Button
                   type="submit"
                   colorScheme="teal"

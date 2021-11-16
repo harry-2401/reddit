@@ -7,17 +7,22 @@ import { validateRegisterInput } from "../utils/validateRegisterInput";
 import { LoginInput } from "../src/types/LoginInput";
 import { Context } from "../src/types/Context";
 import { COOKIE_NAME } from "../src/constants";
+import { ForgotPasswordInput } from "../src/types/ForgotPassword";
+import { sendEmail } from "../utils/sendEmail";
+import { TokenModel } from "../models/Token";
+import { v4 as uuidv4 } from "uuid";
+import { ChangePasswordInput } from "../src/types/ChangePasswordInput";
 
 @Resolver()
 export class UserResolver {
-  @Query(_return => User, {nullable : true})
-  async me(@Ctx() {req} : Context): Promise<User | null | undefined> {
-    if(!req.session.userId) {
+  @Query((_return) => User, { nullable: true })
+  async me(@Ctx() { req }: Context): Promise<User | null | undefined> {
+    if (!req.session.userId) {
       return null;
     }
 
-    const user = await User.findOne(req.session.userId)
-    return user
+    const user = await User.findOne(req.session.userId);
+    return user;
   }
   @Mutation((_return) => UserMutationResponse)
   async register(
@@ -155,5 +160,130 @@ export class UserResolver {
         resolve(true);
       });
     });
+  }
+
+  @Mutation((_return) => Boolean)
+  async forgotPassword(
+    @Arg("forgotPasswordInput") forgotPasswordInput: ForgotPasswordInput
+  ): Promise<boolean> {
+    const user = await User.findOne({ email: forgotPasswordInput.email });
+    console.log(forgotPasswordInput.email);
+
+    if (!user) {
+      return true;
+    }
+
+    const resetToken = uuidv4();
+    const hashedResetToken = await argon2.hash(resetToken);
+
+    await TokenModel.findOneAndDelete({ userId: user.id.toString() });
+    await new TokenModel({
+      userId: user.id.toString(),
+      token: hashedResetToken,
+    }).save();
+
+    await sendEmail(
+      forgotPasswordInput.email,
+      `<a href="http://localhost:3000/change-password?token=${resetToken}&userId=${user.id}">Click here to reset your password </a>`
+    );
+
+    return true;
+  }
+
+  @Mutation((_return) => UserMutationResponse)
+  async changePassword(
+    @Arg("token") token: string,
+    @Arg("userId") userId: string,
+    @Arg("changePasswordInput") changePasswordInput: ChangePasswordInput,
+    @Ctx() { req }: Context
+  ): Promise<UserMutationResponse> {
+    if (changePasswordInput.newPassword.length <= 2) {
+      return {
+        code: 400,
+        success: false,
+        message: "Invalid password",
+        errors: [
+          {
+            field: "password",
+            message: "Length must be greater than 2",
+          },
+        ],
+      };
+    }
+
+    try {
+      const resetPasswordTokenRecord = await TokenModel.findOne({ id: userId });
+      if (!resetPasswordTokenRecord)
+        return {
+          code: 400,
+          success: false,
+          message: "Invalid or expired password reset token",
+          errors: [
+            {
+              field: "token",
+              message: "Invalid or expired password reset token",
+            },
+          ],
+        };
+      console.log(resetPasswordTokenRecord.token);
+
+      const resetPasswordTokenValid = await argon2.verify(
+        resetPasswordTokenRecord.token,
+        token
+      );
+
+      if (!resetPasswordTokenValid)
+        return {
+          code: 400,
+          success: false,
+          message: "Invalid or expired password reset token",
+          errors: [
+            {
+              field: "token",
+              message: "Invalid or expired password reset token",
+            },
+          ],
+        };
+
+      const userIdNum = parseInt(userId);
+
+      const user = await User.findOne(userIdNum);
+
+      if (!user) {
+        return {
+          code: 400,
+          success: false,
+          message: "User no longer exists",
+          errors: [
+            {
+              field: "token",
+              message: "User no longer exists",
+            },
+          ],
+        };
+      }
+
+      const updatedPassword = await argon2.hash(
+        changePasswordInput.newPassword
+      );
+      await User.update({ id: userIdNum }, { password: updatedPassword });
+
+      await resetPasswordTokenRecord.deleteOne();
+
+      req.session.userId = user.id;
+      return {
+        code: 200,
+        success: true,
+        message: "User password reset successfully!",
+        user,
+      };
+    } catch (error: any) {
+      console.log(error);
+      return {
+        code: 500,
+        success: false,
+        message: "Internal server errors " + error.message,
+      };
+    }
   }
 }

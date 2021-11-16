@@ -2,7 +2,7 @@
 import {
   Box,
   Button,
-  FormControl,
+  Link,
   Spinner,
   Flex,
   useToast,
@@ -19,6 +19,7 @@ import {
 } from "../generated/graphql";
 import { mapFieldErrors } from "../helpers/mapFieldErrors";
 import { useCheckAuth } from "../utils/useCheckAuth";
+import NextLink from 'next/link'
 //import { registerMutation } from "../graphql-client/mutation/mutation";
 
 // interface UserMutationResponse {
@@ -45,7 +46,7 @@ const login = () => {
 
   const { loading: authLoading, data: authData } = useCheckAuth();
 
-  const [loginUser, { data, error, loading: _registerUserLoading }] =
+  const [loginUser, { data: _data, error, loading: _registerUserLoading }] =
     useLoginMutation();
 
   const onLoginSubmit = async (
@@ -88,8 +89,6 @@ const login = () => {
     password: "",
   };
 
-  
-
   return (
     <>
       {authLoading || authData?.me ? (
@@ -103,22 +102,25 @@ const login = () => {
           <Formik initialValues={initialValues} onSubmit={onLoginSubmit}>
             {({ isSubmitting }) => (
               <Form>
-                <FormControl>
+                <InputField
+                  name="usernameOrEmail"
+                  placeholder="User name or email"
+                  label="Username or email"
+                  type="text"
+                />
+                <Box mt={4}>
                   <InputField
-                    name="usernameOrEmail"
-                    placeholder="User name or email"
-                    label="Username or email"
-                    type="text"
+                    name="password"
+                    placeholder="Password"
+                    label="Password"
+                    type="password"
                   />
-                  <Box mt={4}>
-                    <InputField
-                      name="password"
-                      placeholder="Password"
-                      label="Password"
-                      type="password"
-                    />
-                  </Box>
-                </FormControl>
+                </Box>
+                <Flex mt={2}>
+                  <NextLink href="/forgot-password" passHref>
+                    <Link ml='auto'>Forgot Password</Link>
+                  </NextLink>
+                </Flex>
                 <Button
                   type="submit"
                   colorScheme="teal"
