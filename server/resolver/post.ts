@@ -1,23 +1,50 @@
-import { AuthenticationError } from "apollo-server-errors";
-import { Arg, ID, Mutation, Query, Resolver, UseMiddleware } from "type-graphql";
+import {
+  Arg,
+  Ctx,
+  FieldResolver,
+  ID,
+  Int,
+  Mutation,
+  Query,
+  Resolver,
+  Root,
+  UseMiddleware,
+} from "type-graphql";
+import { LessThan } from "typeorm";
 import { Post } from "../entities/Post";
+import { User } from "../entities/User";
 import { checkAuth } from "../src/middlewares/checkAuth";
+import { Context } from "../src/types/Context";
 
 import { CreatePostInput } from "../src/types/CreatePostInput";
+import { PaginatedPosts } from "../src/types/PaginatedPosts";
 import { PostMutationResponse } from "../src/types/PostMutationResponse";
 import { UpdatePostInput } from "../src/types/UpdatePostInput";
 
-@Resolver()
+@Resolver((_of) => Post)
 export class PostResolver {
+  @FieldResolver((_return) => String)
+  textSnippet(@Root() root: Post) {
+    if (root.text.length <= 50) return root.text;
+    return root.text.slice(0, 50).concat("...");
+  }
+
+  @FieldResolver((_return) => User)
+  async user(@Root() root: Post) {
+    return await User.findOne(root.userId);
+  }
+
   @Mutation((_return) => PostMutationResponse)
   @UseMiddleware(checkAuth)
   async createPost(
-    @Arg("createPostInput") { title, text }: CreatePostInput
+    @Arg("createPostInput") { title, text }: CreatePostInput,
+    @Ctx() { req }: Context
   ): Promise<PostMutationResponse> {
     try {
       const newPost = Post.create({
         title,
         text,
+        userId: req.session.userId,
       });
 
       await newPost.save();
@@ -38,10 +65,38 @@ export class PostResolver {
     }
   }
 
-  @Query((_return) => [Post], { nullable: true })
-  async posts(): Promise<Post[] | null> {
+  @Query((_return) => PaginatedPosts, { nullable: true })
+  async posts(
+    @Arg("limit", (_Type) => Int) limit: number,
+    @Arg("cursor", { nullable: true }) cursor?: string
+  ): Promise<PaginatedPosts | null> {
     try {
-      return await Post.find();
+      const totalPostsCount = await Post.count();
+      const realLimit = Math.min(10, limit);
+      const findOptions: { [key: string]: any } = {
+        order: {
+          createdAt: "DESC",
+        },
+        take: realLimit,
+      };
+
+      let lastPost: Date | undefined;
+
+      if (cursor) {
+        findOptions.where = {
+          createdAt: LessThan(cursor),
+        };
+      }
+
+      const posts = await Post.find(findOptions);
+      lastPost = posts[posts.length - 1].createdAt as Date;
+
+      return {
+        totalCount: totalPostsCount,
+        cursor: lastPost,
+        hasMore: posts.length >= limit ? true : false,
+        paginatedPosts: posts,
+      };
     } catch (error) {
       console.log(error);
       return null;
@@ -62,7 +117,8 @@ export class PostResolver {
   @Mutation((_return) => PostMutationResponse)
   @UseMiddleware(checkAuth)
   async updatePost(
-    @Arg("updatePostInput") { id, title, text }: UpdatePostInput
+    @Arg("updatePostInput") { id, title, text }: UpdatePostInput,
+    @Ctx() { req }: Context
   ): Promise<PostMutationResponse> {
     try {
       const existingPost = await Post.findOne(id);
@@ -72,6 +128,14 @@ export class PostResolver {
           code: 400,
           success: false,
           message: "Post not found!",
+        };
+      }
+
+      if (existingPost.userId !== req.session.userId) {
+        return {
+          code: 401,
+          success: false,
+          message: "Unauthorized",
         };
       }
 
@@ -100,7 +164,8 @@ export class PostResolver {
   @Mutation((_return) => PostMutationResponse)
   @UseMiddleware(checkAuth)
   async deletePost(
-    @Arg("id", (_type) => ID) id: number
+    @Arg("id", (_type) => ID) id: number,
+    @Ctx() { req }: Context
   ): Promise<PostMutationResponse> {
     try {
       const existingPost = await Post.findOne(id);
@@ -110,6 +175,14 @@ export class PostResolver {
           code: 400,
           success: false,
           message: "Post not found!",
+        };
+      }
+
+      if (existingPost.userId !== req.session.userId) {
+        return {
+          code: 401,
+          success: false,
+          message: "Unauthorized",
         };
       }
 

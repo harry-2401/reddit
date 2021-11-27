@@ -1,0 +1,7 @@
+mutation createPost($createPostInput: CreatePostInput!) {
+  createPost(
+    createPostInput: $createPostInput
+  ) {
+    ...postMutationResponse
+  }
+}

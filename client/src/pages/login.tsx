@@ -96,12 +96,13 @@ const login = () => {
           <Spinner />
         </Flex>
       ) : (
-        <Wrapper>
+        <Wrapper size="small">
           {error && <p>Faild to login. Internal server error</p>}
 
           <Formik initialValues={initialValues} onSubmit={onLoginSubmit}>
             {({ isSubmitting }) => (
               <Form>
+                {console.log("re-render")}
                 <InputField
                   name="usernameOrEmail"
                   placeholder="User name or email"

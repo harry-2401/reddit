@@ -1,5 +1,5 @@
 //import { useMutation } from "@apollo/client";
-import { Button,  Flex, Spinner, useToast } from "@chakra-ui/react";
+import { Button, Flex, Spinner, useToast } from "@chakra-ui/react";
 import { Form, Formik, FormikHelpers } from "formik";
 import { useRouter } from "next/router";
 import InputField from "../components/InputField";
@@ -84,7 +84,7 @@ const register = () => {
           <Spinner />
         </Flex>
       ) : (
-        <Wrapper>
+        <Wrapper size="small">
           {error && <p>Faild to register. Internal server error</p>}
           {data && data.register.success && (
             <p>Register successfully {JSON.stringify(data)}</p>

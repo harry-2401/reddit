@@ -82,7 +82,7 @@ const ChangePassword = () => {
     );
   } else if (!userId || !token) {
     return (
-      <Wrapper>
+      <Wrapper size="small">
         <Alert status="error">
           <AlertIcon />
           <AlertTitle mr={2}>Invalid password change request</AlertTitle>

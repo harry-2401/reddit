@@ -1,36 +1,108 @@
-import NavBar from "../components/Navbar";
-import { PostsDocument, usePostsQuery } from "../generated/graphql";
+import { PostsDocument, useMeQuery, usePostsQuery } from "../generated/graphql";
 import { addApolloState, initializeApollo } from "../lib/apolloClient";
+import {
+  Flex,
+  Spinner,
+  Stack,
+  Box,
+  Link,
+  Heading,
+  Text,
+  Button,
+} from "@chakra-ui/react";
+import NextLink from "next/link";
+import Layout from "../components/Layout";
+import PostEditDeleteButton from "../components/PostEditDeleteButton";
+import { NetworkStatus } from "@apollo/client";
+import { GetStaticProps } from "next";
+
+export const limit = 3;
 
 const Index = () => {
-  const { data, loading } = usePostsQuery();
+  const {data: meData} = useMeQuery()
+  const { data, loading, fetchMore, networkStatus } = usePostsQuery({
+    variables: {
+      limit,
+    },
+    //component nào được render bởi postQuery, sẽ re-render component đó khi network status thay đổi, tức là fetchMore
+    notifyOnNetworkStatusChange: true,
+  });
+
+  const loadingMorePosts = networkStatus === NetworkStatus.fetchMore;
+
+  const loadMorePosts = () =>
+    fetchMore({
+      variables: {
+        cursor: data?.posts?.cursor,
+      },
+    });
 
   return (
-    <>
-      <NavBar />
-      {loading ? (
-        "LOADING....."
+    <Layout>
+      {loading && !loadingMorePosts ? (
+        <Flex
+          justifyContent="center"
+          alignItems="center"
+          maxW="800px"
+          minH="100vh"
+        >
+          <Spinner />
+        </Flex>
       ) : (
-        <ul>
-          {data?.posts?.map((post) => (
-            <li>{post.title}</li>
+        <Stack>
+          {console.log("re-render")}
+          {data?.posts?.paginatedPosts?.map((post) => (
+            <Flex key={post.id} p={5} shadow="md" borderWidth="1px">
+              <Box flex={1}>
+                <NextLink href={`/post/${post.id}`}>
+                  <Link>
+                    <Heading fontSize="xl">{post.title}</Heading>
+                  </Link>
+                </NextLink>
+
+                <Text>posted by {post.user.username}</Text>
+
+                <Flex align="center">
+                  <Text mt={4}>{post.textSnippet}</Text>
+                  <Box ml="auto">
+                    {meData?.me?.id === post.user.id && <PostEditDeleteButton postId={post.id} userId={post.user.id} />}
+                  </Box>
+                </Flex>
+              </Box>
+            </Flex>
           ))}
-        </ul>
+        </Stack>
       )}
-    </>
+
+      {data?.posts?.hasMore && (
+        <Flex>
+          <Button
+            m="auto"
+            my={8}
+            isLoading={loadingMorePosts}
+            onClick={loadMorePosts}
+          >
+            {loadingMorePosts ? "Loading..." : "Show more"}
+          </Button>
+        </Flex>
+      )}
+    </Layout>
   );
 };
 
-export const getStaticProps = async () => {
+export const getStaticProps: GetStaticProps = async () => {
   const apolloClient = initializeApollo();
 
   await apolloClient.query({
     query: PostsDocument,
+    variables: {
+      limit,
+    },
   });
 
   return addApolloState(apolloClient, {
     props: {},
   });
-}
+};
 
 export default Index;

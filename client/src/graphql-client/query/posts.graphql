@@ -1,9 +1,0 @@
-query posts {
-  posts {
-    id
-    title
-    text
-    createAt
-    updateAt
-  }
-}
