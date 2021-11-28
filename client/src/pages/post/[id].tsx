@@ -8,7 +8,6 @@ import {
   Box,
   Button,
 } from "@chakra-ui/react";
-import { EditIcon } from "@chakra-ui/icons";
 import { GetStaticPaths, GetStaticProps } from "next";
 import { useRouter } from "next/router";
 import { limit } from "..";

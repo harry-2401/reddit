@@ -47,7 +47,10 @@ function createApolloClient(headers: IncomingHttpHeaders | null = null) {
   };
 
   const httpLink = new HttpLink({
-    uri: "http://localhost:4000/graphql", // Server URL (must be absolute)
+    uri:
+      process.env.NODE_ENV === "production"
+        ? "https://http://fathomless-tundra-97878.herokuapp.com/graphql"
+        : "http://localhost:4000/graphql", // Server URL (must be absolute)
     credentials: "include", // Additional fetch() options like `credentials` or `headers`
     fetch: enhancedFetch,
   });

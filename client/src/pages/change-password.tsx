@@ -30,7 +30,7 @@ const ChangePassword = () => {
     query: { userId, token },
   } = useRouter();
   const initialValues = { newPassword: "" };
-  const [changePassword, { loading }] = useChangePassMutation();
+  const [changePassword, _] = useChangePassMutation();
 
   const [tokenError, setTokenError] = useState("");
 
