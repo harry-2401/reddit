@@ -2,6 +2,7 @@ import { Reference } from "@apollo/client";
 import { DeleteIcon, EditIcon } from "@chakra-ui/icons";
 import { Box, IconButton } from "@chakra-ui/react";
 import NextLink from "next/link";
+import { useRouter } from "next/router";
 import {
   PaginatedPosts,
   useDeletePostMutation,
@@ -17,6 +18,7 @@ const PostEditDeleteButton = ({
   postId,
   userId,
 }: PostEditDeleteButtonsProps) => {
+  const router = useRouter();
   const [deletePost, _] = useDeletePostMutation();
   const { data: meData } = useMeQuery();
 
@@ -54,6 +56,8 @@ const PostEditDeleteButton = ({
         }
       },
     });
+
+    if (router.route !== "/") router.push("/");
   };
 
   return (

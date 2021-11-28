@@ -20,6 +20,7 @@ import {
 import { mapFieldErrors } from "../helpers/mapFieldErrors";
 import { useCheckAuth } from "../utils/useCheckAuth";
 import NextLink from 'next/link'
+import { initializeApollo } from "../lib/apolloClient";
 //import { registerMutation } from "../graphql-client/mutation/mutation";
 
 // interface UserMutationResponse {
@@ -79,6 +80,9 @@ const login = () => {
         duration: 3000,
         isClosable: true,
       });
+
+      const apolloClient = initializeApollo()
+      apolloClient.resetStore() 
 
       router.push("/");
     }

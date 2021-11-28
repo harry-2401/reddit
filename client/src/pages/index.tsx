@@ -14,7 +14,8 @@ import NextLink from "next/link";
 import Layout from "../components/Layout";
 import PostEditDeleteButton from "../components/PostEditDeleteButton";
 import { NetworkStatus } from "@apollo/client";
-import { GetStaticProps } from "next";
+import { GetServerSideProps, GetServerSidePropsContext } from "next";
+import UpvoteSection from "../components/UpvoteSection";
 
 export const limit = 3;
 
@@ -53,6 +54,7 @@ const Index = () => {
           {console.log("re-render")}
           {data?.posts?.paginatedPosts?.map((post) => (
             <Flex key={post.id} p={5} shadow="md" borderWidth="1px">
+              <UpvoteSection post={post}/>
               <Box flex={1}>
                 <NextLink href={`/post/${post.id}`}>
                   <Link>
@@ -90,8 +92,10 @@ const Index = () => {
   );
 };
 
-export const getStaticProps: GetStaticProps = async () => {
-  const apolloClient = initializeApollo();
+export const getServerSideProps: GetServerSideProps = async (context: GetServerSidePropsContext) => {
+  const apolloClient = initializeApollo({
+    headers: context.req.headers
+  });
 
   await apolloClient.query({
     query: PostsDocument,

@@ -5,9 +5,12 @@ import {
   CreateDateColumn,
   Entity,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from "typeorm";
+import { VoteType } from "../src/types/voteType";
+import { Upvote } from "./Upvote";
 import { User } from "./User";
 
 @ObjectType()
@@ -29,9 +32,19 @@ export class Post extends BaseEntity {
   @Column()
   userId!: number;
 
+  @Field()
+  voteType!: number
+
   @Field((_type) => User)
   @ManyToOne(() => User, (user) => user.posts)
   user!: User;
+
+  @OneToMany(_to => Upvote,upvote => upvote.post)
+  upvotes!: Upvote[]
+
+  @Field()
+  @Column({default: 0})
+  points!: number
 
   @Field()
   @CreateDateColumn({ type: "timestamptz" })

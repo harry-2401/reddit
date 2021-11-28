@@ -15,26 +15,29 @@ import session from "express-session";
 import { COOKIE_NAME, __prod__ } from "./constants";
 import { Context } from "./types/Context";
 import { PostResolver } from "../resolver/post";
-import cors from 'cors'
-
+import cors from "cors";
+import { Upvote } from "../entities/Upvote";
+import { buildDataLoaders } from "../utils/dataLoader";
 
 const main = async (): Promise<void> => {
-  await createConnection({
+  const connection = await createConnection({
     type: "postgres",
     database: "reddit",
     username: process.env.DB_USERNAME_DEV,
     password: process.env.DB_PASSWORD_DEV,
     logging: true,
     synchronize: true,
-    entities: [User, Post],
+    entities: [User, Post, Upvote],
   });
 
   const app = express();
 
-  app.use(cors({
-    origin: "http://localhost:3000",
-    credentials: true
-  }))
+  app.use(
+    cors({
+      origin: "http://localhost:3000",
+      credentials: true,
+    })
+  );
 
   //session - cookie
   const mongoUrl = `mongodb+srv://${process.env.SESSION_DB_USERNAME_DEV_PROD}:${process.env.SESSION_DB_PASSWORD_DEV_PROD}@cluster0.zrrxu.mongodb.net/myFirstDatabase?retryWrites=true&w=majority`;
@@ -65,7 +68,7 @@ const main = async (): Promise<void> => {
       validate: false,
     }),
     plugins: [ApolloServerPluginLandingPageGraphQLPlayground()],
-    context: ({req, res}: Context): Context => ({req, res})
+    context: ({ req, res }: Context): Context => ({ req, res, connection, dataLoaders: buildDataLoaders() }),
   });
   await apolloServer.start();
 
