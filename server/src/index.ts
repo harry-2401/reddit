@@ -18,23 +18,43 @@ import { PostResolver } from "../resolver/post";
 import cors from "cors";
 import { Upvote } from "../entities/Upvote";
 import { buildDataLoaders } from "../utils/dataLoader";
+import path from "path";
 
 const main = async (): Promise<void> => {
   const connection = await createConnection({
     type: "postgres",
-    database: "reddit",
-    username: process.env.DB_USERNAME_DEV,
-    password: process.env.DB_PASSWORD_DEV,
+    ...(__prod__
+      ? { url: process.env.DATABASE_URL }
+      : {
+          database: "reddit",
+          username: process.env.DB_USERNAME_DEV,
+          password: process.env.DB_PASSWORD_DEV,
+        }),
     logging: true,
-    synchronize: true,
+    ...(__prod__
+      ? {
+          extra: {
+            ssl: {
+              rejectUnauthorized: false,
+            },
+          },
+          ssl: true,
+        }
+      : {}),
+    ...(__prod__ ? {} : { synchronize: true }),
     entities: [User, Post, Upvote],
+    migrations: [path.join(__dirname, "/migrations/*")],
   });
+
+  if (__prod__) await connection.runMigrations();
 
   const app = express();
 
   app.use(
     cors({
-      origin: "http://localhost:3000",
+      origin: __prod__
+        ? process.env.CORS_ORIGIN_PROD
+        : process.env.CORS_ORIGIN_DEV,
       credentials: true,
     })
   );
@@ -55,6 +75,7 @@ const main = async (): Promise<void> => {
         httpOnly: true, //js frontend cannot access the cookie
         secure: __prod__, //cookie only work in https
         sameSite: "lax", //protection against CSRF
+        domain: __prod__ ? '.vercel.app' : undefined
       },
       secret: process.env.SESSION_SECRET_DEV_PROD as string,
       saveUninitialized: false, // don't save empty sessions, right from the start
@@ -68,7 +89,12 @@ const main = async (): Promise<void> => {
       validate: false,
     }),
     plugins: [ApolloServerPluginLandingPageGraphQLPlayground()],
-    context: ({ req, res }: Context): Context => ({ req, res, connection, dataLoaders: buildDataLoaders() }),
+    context: ({ req, res }: Context): Context => ({
+      req,
+      res,
+      connection,
+      dataLoaders: buildDataLoaders(),
+    }),
   });
   await apolloServer.start();
 
